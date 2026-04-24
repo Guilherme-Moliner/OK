@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OKR Dashboard 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<style>
+  :root {
+    --bg: #0f0f11;
+    --surface: #18181c;
+    --surface2: #1f1f25;
+    --border: rgba(255,255,255,0.07);
+    --text: #f0eff4;
+    --muted: #6e6d78;
+    --accent-blue: #4a9eff;
+    --accent-green: #3ecf8e;
+    --accent-amber: #f5a623;
+    --accent-red: #ff6b6b;
+    --accent-purple: #a78bfa;
+    --accent-coral: #f87171;
+    --font: 'Inter', system-ui, sans-serif;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+  header {
+    padding: 2.5rem 2rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .header-title { font-size: 22px; font-weight: 600; letter-spacing: -0.03em; }
+  .header-title span { color: var(--accent-blue); }
+  .header-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  #status {
+    font-size: 12px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent-green);
+    animation: pulse 2s infinite;
+  }
+  .dot.loading { background: var(--accent-amber); animation: none; }
+  .dot.error { background: var(--accent-red); animation: none; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  main { padding: 2rem; max-width: 1200px; margin: 0 auto; }
+
+  .section {
+    margin-bottom: 2.5rem;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.25rem;
+  }
+
+  .section-tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+  .tag-fisico { background: rgba(74,158,255,0.15); color: var(--accent-blue); }
+  .tag-negocios { background: rgba(62,207,142,0.15); color: var(--accent-green); }
+  .tag-identidade { background: rgba(167,139,250,0.15); color: var(--accent-purple); }
+
+  .section-line { flex: 1; height: 1px; background: var(--border); }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem 1.1rem;
+  }
+  .card-label { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .card-value { font-size: 30px; font-weight: 600; letter-spacing: -0.02em; }
+  .card-value.blue { color: var(--accent-blue); }
+  .card-value.green { color: var(--accent-green); }
+  .card-value.amber { color: var(--accent-amber); }
+  .card-value.purple { color: var(--accent-purple); }
+  .card-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .card-delta { font-size: 11px; margin-top: 3px; }
+  .card-delta.up { color: var(--accent-green); }
+  .card-delta.down { color: var(--accent-red); }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 14px;
+  }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.25rem 1rem;
+  }
+
+  .chart-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .leg {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .leg-dot {
+    width: 8px; height: 8px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .chart-wrap { position: relative; width: 100%; }
+
+  #loading-screen {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 100;
+    transition: opacity 0.4s;
+  }
+  .spinner {
+    width: 32px; height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent-blue);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--muted); }
+
+  footer {
+    text-align: center;
+    padding: 2rem;
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 600px) {
+    header { padding: 1.5rem 1rem 1rem; }
+    main { padding: 1rem; }
+    .charts-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-text">Carregando dados...</div>
+</div>
+
+<header>
+  <div>
+    <div class="header-title">OKR <span>Dashboard</span> 2026</div>
+    <div class="header-sub">Evolução mensal de hábitos, negócios e identidade</div>
+  </div>
+  <div id="status">
+    <span class="dot loading" id="dot"></span>
+    <span id="status-text">Carregando...</span>
+  </div>
+</header>
+
+<main id="app" style="display:none">
+
+  <!-- FÍSICO -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag tag-fisico">Físico</span>
+      <div class="section-line"></div>
+    </div>
+    <div class="cards" id="cards-fisico"></div>
+    <div class="charts-grid" id="charts-fisico"></div>
+  </div>
+
+  <!-- NEGÓCIOS -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag tag-negocios">Negócios</span>
+      <div class="section-line"></div>
+    </div>
+    <div class="cards" id="cards-negocios"></div>
+    <div class="charts-grid" id="charts-negocios"></div>
+  </div>
+
+  <!-- IDENTIDADE -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-tag tag-identidade">Identidade</span>
+      <div class="section-line"></div>
+    </div>
+    <div class="cards" id="cards-identidade"></div>
+    <div class="charts-grid" id="charts-identidade"></div>
+  </div>
+
+</main>
+
+<footer id="footer" style="display:none">
+  Dados atualizados automaticamente via Google Sheets &nbsp;·&nbsp; <span id="update-time"></span>
+</footer>
+
+<script>
+// URL principal: aba CSV KPIS - 2026 (gid=1807414595)
+// Fallback: documento inteiro
+const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTgPBOcOqRiNOFHzwBG3frj-OV4Nb2QvjIYSpKjvVJKczjTkZhNe6PSSehlUlu5FTg9Xoq3_7yMjSdh/pub?gid=1807414595&single=true&output=csv';
+const CSV_URL_FALLBACK = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTgPBOcOqRiNOFHzwBG3frj-OV4Nb2QvjIYSpKjvVJKczjTkZhNe6PSSehlUlu5FTg9Xoq3_7yMjSdh/pub?output=csv';
+
+// ── CSV parser ──────────────────────────────────────────────
+function splitCSVLine(line) {
+  const cols = [];
+  let cur = '', inQ = false;
+  for (const ch of line) {
+    if (ch === '"') inQ = !inQ;
+    else if (ch === ',' && !inQ) { cols.push(cur.trim().replace(/^"|"$/g,'')); cur = ''; }
+    else cur += ch;
+  }
+  cols.push(cur.trim().replace(/^"|"$/g,''));
+  return cols;
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split('\n').filter(l => l.trim());
+  const headers = splitCSVLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const cols = splitCSVLine(line);
+    const row = {};
+    headers.forEach((h,i) => row[h] = (cols[i] || '').trim());
+    return row;
+  });
+}
+
+function toNum(v) {
+  if (!v || v === '-' || v === '' || v === '#N/A' || v === '#VALUE!') return null;
+  // handle "19,31" Brazilian decimal
+  const n = parseFloat(String(v).replace(/\./g,'').replace(',','.'));
+  if (!isNaN(n)) return n;
+  // fallback: strip non-numeric except dot/minus
+  const n2 = parseFloat(String(v).replace(/[^0-9.\-]/g,''));
+  return isNaN(n2) ? null : n2;
+}
+
+// ── Chart defaults ──────────────────────────────────────────
+const GRID = 'rgba(255,255,255,0.05)';
+const TICK = '#555';
+const baseOpts = (yExtra) => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false }, tooltip: {
+    backgroundColor: '#1f1f25',
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    titleColor: '#aaa',
+    bodyColor: '#f0eff4',
+    padding: 10
+  }},
+  scales: {
+    x: { ticks: { color: TICK, font: { size: 10 }, autoSkip: false, maxRotation: 45 }, grid: { color: GRID } },
+    y: Object.assign({ ticks: { color: TICK, font: { size: 10 } }, grid: { color: GRID } }, yExtra || {})
+  }
+});
+
+function lineds(label, data, color) {
+  return { label, data, borderColor: color, backgroundColor: color+'22',
+    borderWidth: 2, pointRadius: 4, pointBackgroundColor: color,
+    tension: 0.35, fill: false };
+}
+function bards(label, data, color) {
+  return { label, data, backgroundColor: color+'CC', borderRadius: 4, borderSkipped: false };
+}
+
+
+
+// ── Card builders ────────────────────────────────────────────
+function card(label, value, sub, colorClass, delta, deltaDir) {
+  return `<div class="card">
+    <div class="card-label">${label}</div>
+    <div class="card-value ${colorClass||''}">${value}</div>
+    ${sub ? `<div class="card-sub">${sub}</div>` : ''}
+    ${delta ? `<div class="card-delta ${deltaDir}">${delta}</div>` : ''}
+  </div>`;
+}
+
+function legend(items) {
+  return `<div class="legend">${items.map(([c,l])=>`<span class="leg"><span class="leg-dot" style="background:${c}"></span>${l}</span>`).join('')}</div>`;
+}
+
+function chartCard(titleText, legendHtml, canvasId, height) {
+  return `<div class="chart-card">
+    <div class="chart-title">${titleText}</div>
+    ${legendHtml}
+    <div class="chart-wrap"><canvas id="${canvasId}" height="${height||220}"></canvas></div>
+  </div>`;
+}
+
+// ── Chart helpers ─────────────────────────────────────────────
+function withLabels(type) {
+  // returns datalabels plugin config for bar or line
+  return {
+    display: true,
+    color: type === 'bar' ? '#fff' : '#ccc',
+    font: { size: 10, weight: '500' },
+    anchor: type === 'bar' ? 'end' : 'top',
+    align: type === 'bar' ? 'end' : 'top',
+    offset: type === 'bar' ? -4 : 4,
+    formatter: v => v === null || v === undefined ? '' : (Number.isInteger(v) ? v : parseFloat(v.toFixed(2)))
+  };
+}
+
+function makeChartV2(canvasId, type, labels, datasets, yExtra, height, showLabels) {
+  const wrap = document.getElementById(canvasId).parentElement;
+  wrap.style.height = (height || 220) + 'px';
+  const opts = {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: { padding: { top: showLabels ? 24 : 8 } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1f1f25',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        titleColor: '#aaa',
+        bodyColor: '#f0eff4',
+        padding: 10
+      },
+      datalabels: showLabels ? withLabels(type) : { display: false }
+    },
+    scales: {
+      x: { ticks: { color: TICK, font: { size: 10 }, autoSkip: false, maxRotation: 45 }, grid: { color: GRID } },
+      y: Object.assign({ ticks: { color: TICK, font: { size: 10 } }, grid: { color: GRID } }, yExtra || {})
+    }
+  };
+  new Chart(document.getElementById(canvasId), { type, data: { labels, datasets }, options: opts, plugins: [ChartDataLabels] });
+}
+
+// ── Main render ──────────────────────────────────────────────
+function render(rows) {
+  if (!rows.length) return;
+
+  const allKeys = Object.keys(rows[0]);
+  const codeKey = allKeys[0];
+  const monthKeys = allKeys.slice(1).filter(k => k && k.trim() !== '' && k !== 'Best Result');
+
+  const byCode = {};
+  rows.forEach(r => {
+    const code = (r[codeKey] || '').trim();
+    if (!code || code === 'Código Ref') return;
+    byCode[code] = { values: {} };
+    monthKeys.forEach(m => { byCode[code].values[m] = (r[m] || '').trim(); });
+  });
+
+  function activeMths() {
+    let last = 0;
+    Object.values(byCode).forEach(e => {
+      monthKeys.forEach((m,i) => { if (toNum(e.values[m]) !== null) last = Math.max(last, i); });
+    });
+    return monthKeys.slice(0, last + 1);
+  }
+
+  const AM = activeMths();
+
+  function s(code) {
+    const e = byCode[code];
+    if (!e) return AM.map(() => null);
+    return AM.map(m => toNum(e.values[m]));
+  }
+
+  function sum(code) {
+    return s(code).reduce((a,v) => a + (v || 0), 0);
+  }
+
+  function lastVal(code) {
+    const vals = s(code).filter(v => v !== null);
+    return vals.length ? vals[vals.length-1] : null;
+  }
+
+  function deltaStr(code, lowerBetter) {
+    const vals = s(code).filter(v => v !== null);
+    if (vals.length < 2) return null;
+    const d = vals[vals.length-1] - vals[0];
+    const sign = d > 0 ? '+' : '';
+    return { str: sign + d.toFixed(1), dir: lowerBetter ? (d < 0 ? 'up' : 'down') : (d > 0 ? 'up' : 'down') };
+  }
+
+  // ── FÍSICO ──────────────────────────────────────────────────
+  const deltaPeso = deltaStr('PF#01', true);
+  const deltaCint = deltaStr('CF#1', true);
+  const totalTreino = sum('DT#1');
+  const totalBikeKm = sum('MDTB#2');
+  const totalCorridaKm = sum('MDTC#2');
+  const totalPassos = sum('MPD#1');
+  const totalFitDias = sum('DAF#1');
+
+
+
+  document.getElementById('charts-fisico').innerHTML = [
+    chartCard('Peso — evolução mensal', legend([['#4a9eff','Peso (kg)']]), 'ch_peso'),
+    chartCard('Cintura — evolução mensal', legend([['#3ecf8e','Cintura (cm)']]), 'ch_cintura'),
+    chartCard('Dias de treino', legend([['#4a9eff','Treino']]), 'ch_treino'),
+    chartCard('Dias 3 círculos', legend([['#3ecf8e','3 Círculos']]), 'ch_3circ'),
+    chartCard('Dias alimentação fit', legend([['#f5a623','Alim. Fit']]), 'ch_fit'),
+    chartCard('Supino — reps por série (100kg)', legend([['#4a9eff','Série 1'],['#3ecf8e','Série 2'],['#f5a623','Série 3']]), 'ch_supino'),
+    chartCard('Barra — reps por série', legend([['#4a9eff','Série 1'],['#3ecf8e','Série 2'],['#f5a623','Série 3']]), 'ch_barra'),
+    chartCard('Bike — maior distância (km)', legend([['#4a9eff','Distância']]), 'ch_bike'),
+    chartCard('Velocidade média bike (km/h)', legend([['#3ecf8e','Vel. média']]), 'ch_bikeVel'),
+    chartCard('Corrida — maior distância (km)', legend([['#a78bfa','Distância']]), 'ch_corrida'),
+    chartCard('Futebol — gols, assists e partidas', legend([['#4a9eff','Partidas'],['#3ecf8e','Gols'],['#f5a623','Assists']]), 'ch_fut'),
+    chartCard('Pace corrida (min/km) — menor é melhor', legend([['#f87171','Pace']]), 'ch_pace'),
+    chartCard('Média de passos por dia', legend([['#f5a623','Passos']]), 'ch_passos'),
+  ].join('');
+
+  makeChartV2('ch_peso','line',AM,[lineds('Peso',s('PF#01'),'#4a9eff')],{suggestedMin:80,suggestedMax:100},220,true);
+  makeChartV2('ch_cintura','line',AM,[lineds('Cintura',s('CF#1'),'#3ecf8e')],{suggestedMin:80,suggestedMax:100},220,true);
+  makeChartV2('ch_treino','bar',AM,[bards('Treino',s('DT#1'),'#4a9eff')],{},220,true);
+  makeChartV2('ch_3circ','bar',AM,[bards('3 Círculos',s('D3#1'),'#3ecf8e')],{},220,true);
+  makeChartV2('ch_fit','bar',AM,[bards('Alim. Fit',s('DAF#1'),'#f5a623')],{},220,true);
+  makeChartV2('ch_supino','line',AM,[lineds('S1',s('SRSM#2'),'#4a9eff'),lineds('S2',s('SRSM#3'),'#3ecf8e'),lineds('S3',s('SRSM#4'),'#f5a623')],{suggestedMin:0,suggestedMax:14},220,false);
+  makeChartV2('ch_barra','line',AM,[lineds('S1',s('SRBM#2'),'#4a9eff'),lineds('S2',s('SRBM#3'),'#3ecf8e'),lineds('S3',s('SRBM#4'),'#f5a623')],{suggestedMin:0,suggestedMax:12},220,false);
+  makeChartV2('ch_bike','bar',AM,[bards('Distância',s('MDTB#2'),'#4a9eff')],{},220,true);
+  makeChartV2('ch_bikeVel','line',AM,[lineds('Vel.',s('MVMB#1'),'#3ecf8e')],{suggestedMin:10,suggestedMax:25},220,true);
+  makeChartV2('ch_corrida','bar',AM,[bards('Distância',s('MDTC#2'),'#a78bfa')],{},220,true);
+  makeChartV2('ch_fut','bar',AM,[bards('Partidas',s('FUT#2'),'#4a9eff'),bards('Gols',s('FUT#3'),'#3ecf8e'),bards('Assists',s('FUT#4'),'#f5a623')],{},220,true);
+  makeChartV2('ch_pace','line',AM,[lineds('Pace',s('MPCD#2'),'#f87171')],{suggestedMin:4,suggestedMax:7},220,true);
+  makeChartV2('ch_passos','bar',AM,[bards('Passos',s('MPD#1'),'#f5a623')],{},220,true);
+
+  // ── NEGÓCIOS ────────────────────────────────────────────────
+  document.getElementById('cards-negocios').innerHTML = [
+    card('Negócios fechados', lastVal('NFM#1') || '—', 'Mês mais recente', 'green'),
+    card('Contatos/mês', lastVal('CM#1') || '—', 'Mês mais recente', 'green'),
+    card('Reuniões parceiros', lastVal('RRP#1') || '—', 'Mês mais recente', 'amber'),
+    card('Ações de MKT', lastVal('MKTM#1') || '—', 'Mês mais recente', 'amber'),
+  ].join('');
+
+  document.getElementById('charts-negocios').innerHTML = [
+    chartCard('Negócios fechados por mês', legend([['#3ecf8e','Fechados']]), 'ch_nfm'),
+    chartCard('Contatos e reuniões', legend([['#4a9eff','Contatos'],['#f5a623','Reuniões']]), 'ch_contatos'),
+    chartCard('Novos clientes', legend([['#a78bfa','Novos clientes']]), 'ch_clientes'),
+    chartCard('Ações de MKT', legend([['#f87171','Ações MKT']]), 'ch_mkt'),
+  ].join('');
+
+  makeChartV2('ch_nfm','bar',AM,[bards('Fechados',s('NFM#1'),'#3ecf8e')],{},220,true);
+  makeChartV2('ch_contatos','bar',AM,[bards('Contatos',s('CM#1'),'#4a9eff'),bards('Reuniões',s('RRP#1'),'#f5a623')],{},220,true);
+  makeChartV2('ch_clientes','bar',AM,[bards('Clientes',s('NCM#1'),'#a78bfa')],{},220,true);
+  makeChartV2('ch_mkt','bar',AM,[bards('MKT',s('MKTM#1'),'#f87171')],{},220,true);
+
+  // ── IDENTIDADE ──────────────────────────────────────────────
+  const totalShows = sum('SM#1');
+  const totalEnsaios = sum('EM#1');
+  const totalMusical = sum('PM#1');
+  const totalLivros = sum('LF#1');
+  const totalJogos = sum('JF#1');
+  const totalFilmes = sum('FA#1');
+  const totalSeries = sum('SF#!');
+
+  // Variação de peso acumulada
+  const pesoVals = s('PF#01').filter(v => v !== null);
+  const pesoVar = pesoVals.length >= 2 ? (pesoVals[pesoVals.length-1] - pesoVals[0]).toFixed(1) : null;
+  const pesoVarStr = pesoVar ? (pesoVar > 0 ? '+'+pesoVar : pesoVar)+'kg' : '—';
+  const pesoVarDir = pesoVar && parseFloat(pesoVar) < 0 ? 'up' : 'down';
+
+  document.getElementById('cards-fisico').innerHTML = [
+    card('Peso atual', lastVal('PF#01') ? lastVal('PF#01')+'kg' : '—', 'Mais recente', 'blue'),
+    card('Cintura', lastVal('CF#1') ? lastVal('CF#1')+'cm' : '—', 'Mais recente', 'blue'),
+    card('Dias treino (mês)', lastVal('DT#1') || '—', 'Mês atual', 'green'),
+    card('Passos/dia', lastVal('MPD#1') ? Math.round(lastVal('MPD#1')).toLocaleString('pt-BR') : '—', 'Média mensal', 'amber'),
+    card('Variação de peso', pesoVarStr, 'Início vs atual 2026', 'blue', null, pesoVarDir),
+    card('Dias treinados no ano', totalTreino || '—', 'Acumulado 2026', 'green'),
+    card('Km rodados de bike', totalBikeKm.toFixed(1)+'km', 'Acumulado 2026', 'blue'),
+    card('Km corridos no ano', totalCorridaKm.toFixed(1)+'km', 'Acumulado 2026', 'amber'),
+    card('Dias alim. fit no ano', totalFitDias || '—', 'Acumulado 2026', 'green'),
+  ].join('');
+
+  document.getElementById('cards-identidade').innerHTML = [
+    card('Produção musical', lastVal('PM#1') || '—', 'Sessões mês atual', 'purple'),
+    card('Livros finalizados', lastVal('LF#1') || '—', 'Mês atual', 'purple'),
+    card('Dias organizados', lastVal('DO#1') || '—', 'Mês atual', 'amber'),
+    card('Out of the box', lastVal('OOTB#1') || '—', 'Dias de coragem', 'amber'),
+    card('Produções musicais no ano', totalMusical || '—', 'Acumulado 2026', 'purple'),
+    card('Livros lidos no ano', totalLivros || '—', 'Acumulado 2026', 'amber'),
+    card('Jogos finalizados no ano', totalJogos || '—', 'Acumulado 2026', 'green'),
+    card('Filmes assistidos no ano', totalFilmes || '—', 'Acumulado 2026', 'amber'),
+  ].join('');
+
+  document.getElementById('charts-identidade').innerHTML = [
+    chartCard('Música — produção e shows', legend([['#a78bfa','Produção'],['#3ecf8e','Ensaios'],['#f87171','Shows']]), 'ch_musica'),
+    chartCard('Livros', legend([['#4a9eff','Livros']]), 'ch_livros'),
+    chartCard('Jogos', legend([['#3ecf8e','Jogos']]), 'ch_jogos'),
+    chartCard('Séries', legend([['#f5a623','Séries']]), 'ch_series'),
+    chartCard('Filmes', legend([['#f87171','Filmes']]), 'ch_filmes'),
+    chartCard('Hábitos de identidade', legend([['#4a9eff','Organizados'],['#f5a623','Good BF'],['#3ecf8e','Out of Box']]), 'ch_habitos'),
+  ].join('');
+
+  makeChartV2('ch_musica','bar',AM,[bards('Produção',s('PM#1'),'#a78bfa'),bards('Ensaios',s('EM#1'),'#3ecf8e'),bards('Shows',s('SM#1'),'#f87171')],{},220,true);
+  makeChartV2('ch_livros','line',AM,[lineds('Livros',s('LF#1'),'#4a9eff')],{suggestedMin:0,suggestedMax:4},220,true);
+  makeChartV2('ch_jogos','line',AM,[lineds('Jogos',s('JF#1'),'#3ecf8e')],{suggestedMin:0,suggestedMax:4},220,true);
+  makeChartV2('ch_series','line',AM,[lineds('Séries',s('SF#!'),'#f5a623')],{suggestedMin:0,suggestedMax:4},220,true);
+  makeChartV2('ch_filmes','line',AM,[lineds('Filmes',s('FA#1'),'#f87171')],{suggestedMin:0,suggestedMax:4},220,true);
+  makeChartV2('ch_habitos','line',AM,[lineds('Organizados',s('DO#1'),'#4a9eff'),lineds('Good BF',s('GBF#1'),'#f5a623'),lineds('Out of Box',s('OOTB#1'),'#3ecf8e')],{},220,true);
+}
+
+// ── Fetch & init ─────────────────────────────────────────────
+async function init() {
+  const dot = document.getElementById('dot');
+  const statusText = document.getElementById('status-text');
+
+  try {
+    let text = '';
+    try {
+      const res = await fetch(CSV_URL, { mode: 'cors' });
+      if (!res.ok) throw new Error('gid fetch failed');
+      text = await res.text();
+      if (text.includes('<!DOCTYPE') || text.includes('<html')) throw new Error('got HTML');
+    } catch(_) {
+      // fallback: documento inteiro
+      const res2 = await fetch(CSV_URL_FALLBACK, { mode: 'cors' });
+      if (!res2.ok) throw new Error('HTTP ' + res2.status);
+      text = await res2.text();
+    }
+
+    if (!text || text.trim().length < 10) throw new Error('Resposta vazia do servidor');
+
+    const rows = parseCSV(text);
+    if (!rows.length) throw new Error('CSV sem linhas de dados');
+
+    render(rows);
+
+    document.getElementById('loading-screen').style.opacity = '0';
+    setTimeout(() => document.getElementById('loading-screen').style.display = 'none', 400);
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('footer').style.display = 'block';
+
+    dot.className = 'dot';
+    const now = new Date().toLocaleString('pt-BR');
+    statusText.textContent = 'Atualizado ' + now;
+    document.getElementById('update-time').textContent = now;
+
+  } catch (e) {
+    dot.className = 'dot error';
+    statusText.textContent = 'Erro ao carregar dados';
+    const errMsg = e.message || 'Erro desconhecido';
+    document.getElementById('loading-screen').innerHTML = `
+      <div style="max-width:420px;text-align:center;padding:2rem">
+        <div style="color:#ff6b6b;font-size:15px;font-weight:500;margin-bottom:12px">Erro ao carregar dados</div>
+        <div style="color:#888;font-size:12px;background:#1a1a1e;border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-family:monospace;text-align:left">${errMsg}</div>
+        <div style="color:#666;font-size:12px;margin-bottom:6px;text-align:left">Checklist:</div>
+        <div style="color:#666;font-size:12px;text-align:left;line-height:2">
+          ✓ Arquivo → Publicar na Web<br>
+          ✓ Selecionar aba <b style="color:#aaa">CSV KPIS - 2026</b><br>
+          ✓ Formato: <b style="color:#aaa">Valores separados por vírgula (.csv)</b><br>
+          ✓ Clicar em <b style="color:#aaa">Publicar</b> (não só "Republicar")
+        </div>
+        <button onclick="location.reload()" style="margin-top:20px;padding:9px 24px;background:#1f1f25;color:#f0eff4;border:1px solid rgba(255,255,255,0.12);border-radius:8px;cursor:pointer;font-size:13px">Tentar novamente</button>
+      </div>
+    `;
+  }
+}
+
+init();
+</script>
+</body>
+</html>
